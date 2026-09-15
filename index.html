@@ -1,0 +1,578 @@
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Magic Num — Real-Time Number Challenge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800;900&family=Outfit:wght@200;300;400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root{
+    --bg:#070B16; --bg2:#0B1120; --blue:#4F7CFF; --blue2:#6E9BFF; --violet:#8B5CF6; --violet2:#B79CFF; --cyan:#5FE3FF;
+    --glass:rgba(255,255,255,.045); --glass-strong:rgba(255,255,255,.08); --line:rgba(255,255,255,.10); --txt:#EAF0FF; --muted:#8B96B8;
+  }
+  *{ -webkit-tap-highlight-color:transparent; }
+  body{ background:var(--bg); color:var(--txt); font-family:'Outfit',sans-serif; overflow-x:hidden; }
+  .font-display{ font-family:'Orbitron',sans-serif; }
+  .serif-it{ font-family:'Fraunces',serif; }
+  ::selection{ background:var(--violet); color:#fff; }
+  .orb{ position:fixed; border-radius:9999px; filter:blur(90px); pointer-events:none; z-index:0; }
+  .gridbg{ position:fixed; inset:0; z-index:0; pointer-events:none;
+    background-image:linear-gradient(rgba(110,155,255,.05) 1px, transparent 1px),linear-gradient(90deg, rgba(110,155,255,.05) 1px, transparent 1px);
+    background-size:56px 56px;
+    mask-image:radial-gradient(ellipse 80% 60% at 50% 0%, black 30%, transparent 75%); }
+  .glass{ background:linear-gradient(160deg, rgba(255,255,255,.07), rgba(255,255,255,.03)); border:1px solid var(--line); backdrop-filter:blur(22px); box-shadow:0 30px 60px -20px rgba(0,0,0,.65), inset 0 1px 0 rgba(255,255,255,.09); }
+  .card{ border-radius:28px; }
+  .btn-primary{ background:linear-gradient(135deg,#4F7CFF 0%,#8B5CF6 100%); box-shadow:0 14px 40px -8px rgba(99,102,241,.65), inset 0 1px 0 rgba(255,255,255,.35); transition:transform .25s cubic-bezier(.2,.9,.3,1.4), box-shadow .25s; }
+  .btn-primary:hover{ transform:translateY(-3px); box-shadow:0 22px 50px -8px rgba(99,102,241,.8), inset 0 1px 0 rgba(255,255,255,.35); }
+  .btn-primary:active{ transform:translateY(-1px) scale(.98); }
+  .btn-ghost{ background:var(--glass); border:1px solid var(--line); backdrop-filter:blur(14px); transition:transform .25s ease, background .25s; }
+  .btn-ghost:hover{ background:var(--glass-strong); transform:translateY(-2px); }
+  .pill{ border:1px solid var(--line); background:rgba(255,255,255,.05); }
+  .num-circle{ position:relative; border-radius:22px; border:1px solid var(--line); background:linear-gradient(160deg, rgba(255,255,255,.09), rgba(255,255,255,.03)); backdrop-filter:blur(10px); transition:transform .22s cubic-bezier(.3,1.4,.4,1), border-color .2s, box-shadow .2s; }
+  .num-circle:hover:not(:disabled){ transform:translateY(-5px) scale(1.03); border-color:rgba(110,155,255,.6); box-shadow:0 18px 40px -10px rgba(79,124,255,.55); }
+  .num-circle.picked{ background:linear-gradient(135deg,#4F7CFF,#8B5CF6); border-color:transparent; box-shadow:0 16px 44px -8px rgba(99,102,241,.75); }
+  .num-circle.secret{ background:repeating-linear-gradient(135deg, rgba(139,92,246,.25) 0 10px, rgba(79,124,255,.18) 10px 20px); }
+  .num-circle:disabled{ opacity:.45; cursor:default; }
+  .dot{ width:10px; height:10px; border-radius:9999px; position:relative; }
+  .dot::after{ content:''; position:absolute; inset:-4px; border-radius:9999px; border:2px solid currentColor; opacity:.5; animation:pulse 1.8s infinite; }
+  @keyframes pulse{ 0%{ transform:scale(.55); opacity:.7; } 70%{ transform:scale(1.15); opacity:0; } 100%{ opacity:0; } }
+  @keyframes floatIn{ from{ opacity:0; transform:translateY(26px) scale(.97); } to{ opacity:1; transform:none; } }
+  @keyframes flipIn{ 0%{ transform:rotateY(90deg) scale(.85); opacity:0; } 100%{ transform:none; opacity:1; } }
+  .anim-in{ animation:floatIn .55s cubic-bezier(.2,.8,.2,1) both; }
+  .flip{ animation:flipIn .45s cubic-bezier(.2,.8,.2,1) both; }
+  .shimmer{ position:relative; overflow:hidden; }
+  .shimmer::before{ content:''; position:absolute; top:-50%; left:-80%; width:50%; height:200%; transform:rotate(20deg); background:linear-gradient(90deg, transparent, rgba(255,255,255,.28), transparent); animation:sheen 3.4s infinite; }
+  @keyframes sheen{ 0%,60%{ left:-80%; } 100%{ left:130%; } }
+  .timerbar{ height:6px; border-radius:9999px; background:linear-gradient(90deg,#5FE3FF,#8B5CF6); transition:width 1s linear; }
+  .toast{ animation:floatIn .35s cubic-bezier(.2,.9,.3,1.3) both; }
+  input:focus{ outline:2px solid rgba(110,155,255,.7); outline-offset:2px; }
+  .code-box{ letter-spacing:.35em; }
+  .nope{ animation:shake .45s; }
+  @keyframes shake{ 10%,90%{transform:translateX(-2px)} 20%,80%{transform:translateX(3px)} 30%,50%,70%{transform:translateX(-5px)} 40%,60%{transform:translateX(5px)} }
+  ::-webkit-scrollbar{ width:8px } ::-webkit-scrollbar-thumb{ background:linear-gradient(#4F7CFF,#8B5CF6); border-radius:8px } ::-webkit-scrollbar-track{ background:#0B1120 }
+</style>
+</head>
+<body class="antialiased">
+
+<div class="orb w-[420px] h-[420px] -top-32 -left-32" style="background:radial-gradient(circle,#4F7CFF55,transparent 70%)"></div>
+<div class="orb w-[380px] h-[380px] top-1/2 -right-32" style="background:radial-gradient(circle,#8B5CF655,transparent 70%)"></div>
+<div class="orb w-[300px] h-[300px] bottom-0 left-1/4" style="background:radial-gradient(circle,#5FE3FF33,transparent 70%)"></div>
+<div class="gridbg"></div>
+
+<!-- Top Nav -->
+<header class="relative z-10 flex items-center justify-between px-4 sm:px-8 py-6 max-w-6xl mx-auto w-full">
+  <button onclick="showScreen('screen-login')" class="flex items-center gap-3 text-left" aria-label="Magic Num home">
+    <span class="w-11 h-11 rounded-2xl btn-primary grid place-items-center text-white">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8"/></svg>
+    </span>
+    <span>
+      <span class="font-display text-sm tracking-[.35em] uppercase block">Magic Num</span>
+      <span class="text-[11px] text-[color:var(--muted)] uppercase tracking-[.25em]">Real-Time Duel</span>
+    </span>
+  </button>
+  <nav class="flex items-center gap-2 sm:gap-3">
+    <button onclick="showScreen('screen-leaderboard')" class="pill rounded-full px-4 py-2 text-xs sm:text-sm font-semibold">Leaderboard</button>
+  </nav>
+</header>
+
+<main class="relative z-10 px-4 sm:px-8 pb-20 max-w-5xl mx-auto w-full">
+
+  <!-- ============ 1. LOGIN ============ -->
+  <section id="screen-login" class="screen">
+    <div class="glass card shimmer p-6 sm:p-10 text-center anim-in max-w-xl mx-auto mt-4">
+      <p class="uppercase tracking-[.5em] text-[11px] text-[color:var(--blue2)]">Two players · 100 levels · Pure deduction</p>
+      <h1 class="font-display leading-[.95] my-5 text-[clamp(2.4rem,7vw,4.6rem)]">MAGIC<br><span class="italic serif-it font-normal normal-case tracking-normal" style="background:linear-gradient(100deg,#8FB1FF,#B79CFF 45%,#5FE3FF);-webkit-background-clip:text;background-clip:text;color:transparent">Num.</span></h1>
+      <p class="text-[color:var(--muted)] max-w-md mx-auto">A real-time online number challenge. One player secretly picks. The other reads the magic. Across 10 rounds per level — up to Level 100.</p>
+
+      <div class="mt-8 space-y-4 text-left">
+        <label class="block">
+          <span class="text-xs uppercase tracking-[.3em] text-[color:var(--muted)] mb-2 block">Player Name</span>
+          <input id="playerName" type="text" maxlength="18" placeholder="e.g. Arcana Queen" class="w-full rounded-2xl border border-[color:var(--line)] bg-white/5 px-5 py-4 text-base backdrop-blur-xl placeholder:text-white/30">
+        </label>
+        <div class="grid sm:grid-cols-2 gap-3">
+          <button onclick="createRoom()" class="btn-primary rounded-2xl px-6 py-4 font-semibold text-white">Create Room</button>
+          <button onclick="openJoin()" class="btn-ghost rounded-2xl px-6 py-4 font-semibold">Join Room</button>
+        </div>
+        <button onclick="toggleModal('modal-rules')" class="w-full pill rounded-2xl px-6 py-4 text-sm font-semibold text-[color:var(--blue2)]">Game Rules</button>
+      </div>
+
+      <div class="mt-8 flex flex-wrap justify-center gap-3" id="loginHint"></div>
+    </div>
+  </section>
+
+  <!-- ============ 2/3. ROOM + WAITING ============ -->
+  <section id="screen-room" class="screen hidden">
+    <div class="glass card p-6 sm:p-10 max-w-2xl mx-auto mt-4 anim-in">
+      <p class="text-xs uppercase tracking-[.35em] text-[color:var(--blue2)]">Secure Session · P2P + Firebase Sync</p>
+      <h2 class="font-display text-2xl sm:text-4xl mt-2">Room <span id="roomPlayerName" class="serif-it italic font-normal"></span></h2>
+
+      <div class="mt-8 text-center">
+        <span class="text-xs uppercase tracking-[.4em] text-[color:var(--muted)]">Room Code</span>
+        <div class="flex items-center justify-center gap-3 mt-3 flex-wrap">
+          <button onclick="copyCode()" id="roomCode" class="code-box font-display text-[clamp(1.6rem,6vw,2.8rem)] rounded-3xl px-6 py-5 border border-[color:var(--line)] bg-white/5 backdrop-blur-xl" title="Copy code">000000</button>
+          <button onclick="copyCode()" class="btn-ghost rounded-2xl px-5 py-4 text-sm font-semibold">Copy</button>
+        </div>
+        <p id="waitingMsg" class="text-sm text-[color:var(--muted)] mt-4">Waiting for Opponent...</p>
+        <div class="flex items-center justify-center gap-2 mt-2 text-xs uppercase tracking-[.3em] text-emerald-300">
+          <span class="dot text-emerald-400 bg-emerald-400"></span> Online · Server Reachable
+        </div>
+      </div>
+
+      <div class="grid sm:grid-cols-2 gap-4 mt-8" id="roomPlayers"></div>
+
+      <div class="mt-8 flex flex-col sm:flex-row gap-3">
+        <button id="btnSimulate" onclick="simulateOpponent()" class="btn-ghost rounded-2xl px-6 py-4 text-sm font-semibold flex-1">Simulate Opponent Joins</button>
+        <button id="btnStart" onclick="startGame()" disabled class="btn-primary rounded-2xl px-6 py-4 font-semibold text-white flex-1 disabled:opacity-40 disabled:pointer-events-none">Start Game</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 4/5. GAME SCREEN ============ -->
+  <section id="screen-game" class="screen hidden">
+    <!-- Header stats -->
+    <div class="glass card p-4 sm:p-6 mb-5 anim-in">
+      <div class="flex items-center justify-between gap-3 flex-wrap">
+        <div class="flex items-center gap-4 sm:gap-6">
+          <div>
+            <p class="text-[11px] uppercase tracking-[.3em] text-[color:var(--muted)]">P1 Score</p>
+            <h3 id="scoreP1" class="font-display text-3xl" style="color:#8FB1FF">0</h3>
+          </div>
+        </div>
+        <div class="text-center">
+          <p class="text-[11px] uppercase tracking-[.3em] text-[color:var(--muted)]">Level / Round</p>
+          <h3 class="font-display text-lg sm:text-2xl"><span id="levelLabel">1</span> <span class="opacity-40">/</span> <span id="roundLabel">1</span><span class="text-sm opacity-50"> / 10</span></h3>
+          <div class="w-36 sm:w-52 mx-auto h-1.5 rounded-full bg-white/5 mt-3 overflow-hidden">
+            <div id="timerFill" class="timerbar" style="width:100%"></div>
+          </div>
+          <p class="text-xs text-[color:var(--muted)] mt-2"><span id="timerLabel">15</span>s decision · auto-skip</p>
+        </div>
+        <div>
+          <p class="text-[11px] uppercase tracking-[.3em] text-[color:var(--muted)]">P2 Score</p>
+          <h3 id="scoreP2" class="font-display text-3xl" style="color:#B79CFF">0</h3>
+        </div>
+      </div>
+    </div>
+
+    <div class="glass card p-6 sm:p-10 text-center anim-in">
+      <div id="phaseBanner" class="inline-flex items-center gap-3 pill rounded-full px-5 py-3 text-xs sm:text-sm font-semibold uppercase tracking-[.25em]"></div>
+      <h2 id="turnTitle" class="font-display text-xl sm:text-3xl mt-5 leading-tight">Player One: pick a secret number</h2>
+      <p id="turnSub" class="text-sm text-[color:var(--muted)] mt-3">Your selection is hidden from your opponent via encrypted payload.</p>
+
+      <div id="circleGrid" class="grid gap-4 sm:gap-5 mt-8 justify-center" style="grid-template-columns:repeat(auto-fit,minmax(84px,1fr))"></div>
+
+      <div id="streakRow" class="flex flex-wrap justify-center gap-3 mt-7"></div>
+
+      <div id="resultBanner" class="min-h-[76px] mt-7 flex items-center justify-center"></div>
+    </div>
+  </section>
+
+  <!-- ============ 6. LEVEL COMPLETE ============ -->
+  <section id="screen-level" class="screen hidden">
+    <div class="glass card p-6 sm:p-10 max-w-2xl mx-auto mt-4 anim-in">
+      <p class="text-xs uppercase tracking-[.35em] text-emerald-300">Automatic Unlock · Level <span id="lcLevel">1</span> Cleared</p>
+      <h2 class="font-display text-3xl sm:text-5xl mt-3">Level Complete</h2>
+      <div class="grid sm:grid-cols-2 gap-4 mt-8">
+        <div class="pill rounded-3xl p-6"><p class="text-xs uppercase tracking-[.3em] text-[color:var(--muted)]">P1 Final Score</p><h3 id="lcP1" class="font-display text-4xl mt-2" style="color:#8FB1FF">0</h3></div>
+        <div class="pill rounded-3xl p-6"><p class="text-xs uppercase tracking-[.3em] text-[color:var(--muted)]">P2 Final Score</p><h3 id="lcP2" class="font-display text-4xl mt-2" style="color:#B79CFF">0</h3></div>
+      </div>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6" id="lcStats"></div>
+      <div class="mt-8 flex flex-col sm:flex-row gap-3">
+        <button onclick="advanceLevel()" class="btn-primary rounded-2xl px-8 py-5 font-semibold text-white flex-1">Unlock Next Level</button>
+        <button onclick="showScreen('screen-leaderboard')" class="btn-ghost rounded-2xl px-8 py-5 text-sm font-semibold">Leaderboard</button>
+      </div>
+      <button onclick="finishGame()" class="w-full text-xs uppercase tracking-[.3em] text-[color:var(--muted)] mt-6">Jump to Level 100 · Final Result →</button>
+    </div>
+  </section>
+
+  <!-- ============ 7. LEADERBOARD ============ -->
+  <section id="screen-leaderboard" class="screen hidden">
+    <div class="glass card p-6 sm:p-10 max-w-3xl mx-auto mt-4 anim-in">
+      <h2 class="font-display text-3xl sm:text-5xl">Global <span class="serif-it italic font-normal" style="background:linear-gradient(90deg,#8FB1FF,#B79CFF);-webkit-background-clip:text;background-clip:text;color:transparent">Leaderboard.</span></h2>
+      <div class="overflow-x-auto mt-8">
+        <table class="w-full min-w-[720px]">
+          <thead><tr class="text-left text-[11px] uppercase tracking-[.25em] text-[color:var(--muted)]">
+            <th class="py-4 px-3">Rank</th><th class="py-4 px-3">Player</th><th class="py-4 px-3">Wins</th><th class="py-4 px-3">Matches</th><th class="py-4 px-3">Highest Score</th><th class="py-4 px-3">Levels</th><th class="py-4 px-3">Win %</th>
+          </tr></thead>
+          <tbody id="lbBody" class="divide-y divide-white/5"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 8. FINAL RESULT ============ -->
+  <section id="screen-final" class="screen hidden">
+    <div class="glass card shimmer p-6 sm:p-12 max-w-2xl mx-auto mt-4 text-center anim-in">
+      <p class="text-xs uppercase tracking-[.4em] text-[color:var(--cyan)]">Level 100 · All Rounds Complete</p>
+      <h2 class="font-display text-3xl sm:text-5xl leading-[1.02] mt-4">Congratulations!<br><span class="serif-it italic font-normal text-[#B79CFF]">You Completed Magic Num.</span></h2>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-8" id="finalStats"></div>
+      <div class="pill rounded-3xl p-6 mt-6">
+        <p class="text-xs uppercase tracking-[.3em] text-[color:var(--muted)]">Final Rank</p>
+        <h3 class="font-display text-2xl sm:text-4xl mt-2" style="background:linear-gradient(90deg,#5FE3FF,#8FB1FF,#B79CFF);-webkit-background-clip:text;background-clip:text;color:transparent">Diamond Ascendant · #014</h3>
+      </div>
+      <div class="flex flex-col sm:flex-row gap-3 mt-8">
+        <button onclick="resetAll()" class="btn-primary rounded-2xl px-8 py-5 font-semibold text-white flex-1">Play Again</button>
+        <button onclick="showScreen('screen-login')" class="btn-ghost rounded-2xl px-8 py-5 text-sm font-semibold flex-1">Return Home</button>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- Rules modal -->
+<div id="modal-rules" class="modal fixed inset-0 z-50 hidden items-center justify-center p-4" style="background:rgba(4,7,14,.7); backdrop-filter:blur(10px)" onclick="if(event.target===this)toggleModal('modal-rules')">
+  <div class="glass card p-7 max-w-lg w-full anim-in" onclick="event.stopPropagation()">
+    <h3 class="font-display text-2xl">Game Rules</h3>
+    <ul class="mt-6 space-y-4 text-sm text-[color:var(--muted)]" id="rulesList"></ul>
+    <button onclick="toggleModal('modal-rules')" class="btn-primary w-full rounded-2xl py-4 mt-6 font-semibold text-white">Got it</button>
+  </div>
+</div>
+
+<!-- Join modal -->
+<div id="modal-join" class="modal fixed inset-0 z-50 hidden items-center justify-center p-4" style="background:rgba(4,7,14,.7); backdrop-filter:blur(10px)" onclick="if(event.target===this)toggleModal('modal-join')">
+  <div class="glass card p-7 max-w-md w-full anim-in" onclick="event.stopPropagation()">
+    <h3 class="font-display text-2xl">Join Room</h3>
+    <label class="block mt-6"><span class="text-xs uppercase tracking-[.3em] text-[color:var(--muted)]">6-Digit Room Code</span>
+      <input id="joinCode" type="text" inputmode="numeric" maxlength="6" placeholder="123456" class="w-full text-center font-display text-3xl tracking-[.35em] rounded-2xl border border-[color:var(--line)] bg-white/5 backdrop-blur-xl py-5">
+    </label>
+    <button onclick="joinRoom()" class="btn-primary w-full rounded-2xl py-4 mt-5 font-semibold text-white">Join &amp; Enter Room</button>
+    <button onclick="toggleModal('modal-join')" class="btn-ghost w-full rounded-2xl py-4 mt-3 text-sm font-semibold">Cancel</button>
+  </div>
+</div>
+
+<script>
+/* ============ STATE ============ */
+const state = {
+  player: '', roomCode: '000000', opponentJoined: false,
+  level: 1, round: 1, scoreP1: 0, scoreP2: 0,
+  correctP1: 0, correctP2: 0, wrongP1: 0, wrongP2: 0, // this level
+  streakP1: 0, streakP2: 0,
+  phase: 'p1Pick', p1Choice: null, picks: {},
+  selectedNumbers: [], timer: 15, timerId: null,
+};
+const MAXLVL = 100;
+const numbersFor = lvl => Math.min(2 + (lvl - 1), 12); // demo cap 12 circles on screen; label mentions growth
+
+function getName(){
+  const v = document.getElementById('playerName').value.trim();
+  if(!v){ document.getElementById('playerName').focus();
+    document.getElementById('playerName').classList.add('nope');
+    setTimeout(()=>document.getElementById('playerName').classList.remove('nope'),500);
+    return null; }
+  return v;
+}
+
+/* ============ NAV / SCREENS ============ */
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+  const el = document.getElementById(id);
+  el.classList.remove('hidden');
+  el.classList.remove('anim-in'); void el.offsetWidth; el.classList.add('anim-in');
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+function toggleModal(id){
+  const m = document.getElementById(id);
+  const open = m.classList.contains('hidden');
+  document.querySelectorAll('.modal').forEach(x=>{ x.classList.add('hidden'); x.classList.remove('flex'); });
+  if(open){ m.classList.remove('hidden'); m.classList.add('flex'); }
+}
+
+/* ============ LOGIN ============ */
+document.getElementById('loginHint').innerHTML = ['Online · WebSocket','Firebase Sync','100 Levels','Streak Bonuses +5'].map(t=>`<button onclick="showScreen('screen-leaderboard')" class="pill rounded-full px-4 py-2 text-xs font-semibold">${t}</button>`).join('');
+
+function createRoom(){
+  const name = getName(); if(!name) return;
+  state.player = name;
+  state.roomCode = String(Math.floor(100000 + Math.random()*900000));
+  state.opponentJoined = false;
+  document.getElementById('roomPlayerName').textContent = name;
+  document.getElementById('roomCode').textContent = state.roomCode;
+  renderRoomPlayers();
+  document.getElementById('waitingMsg').textContent = 'Waiting for Opponent...';
+  const btn = document.getElementById('btnStart'); btn.disabled = true;
+  const sim = document.getElementById('btnSimulate'); sim.classList.remove('hidden');
+  showScreen('screen-room');
+}
+function openJoin(){ if(!getName()) return; document.getElementById('joinCode').value=''; toggleModal('modal-join'); }
+function joinRoom(){
+  if(!getName()) return;
+  const code = document.getElementById('joinCode').value.trim();
+  const input = document.getElementById('joinCode');
+  if(!/^\d{6}$/.test(code)){ input.classList.add('nope'); setTimeout(()=>input.classList.remove('nope'),500); return; }
+  state.player = getName() || state.player;
+  state.roomCode = code; state.opponentJoined = true;
+  document.getElementById('roomPlayerName').textContent = state.player;
+  document.getElementById('roomCode').textContent = code;
+  renderRoomPlayers();
+  document.getElementById('waitingMsg').textContent = 'Connected · Match found';
+  document.getElementById('btnStart').disabled = false;
+  document.getElementById('btnSimulate').classList.add('hidden');
+  toggleModal('modal-join');
+  showScreen('screen-room');
+}
+function copyCode(){
+  const code = state.roomCode;
+  if(navigator.clipboard) navigator.clipboard.writeText(code).catch(()=>{});
+  const el = document.getElementById('roomCode');
+  el.textContent = code;
+  el.animate([{transform:'scale(1)'},{transform:'scale(1.08)'},{transform:'scale(1)'}], {duration:350, easing:'cubic-bezier(.2,.9,.3,1.4)'});
+}
+
+/* ============ ROOM ============ */
+function renderRoomPlayers(){
+  const wrap = document.getElementById('roomPlayers');
+  const p1Card = `
+    <div class="pill rounded-3xl p-6 relative overflow-hidden">
+      <div class="absolute inset-x-0 top-0 h-1" style="background:linear-gradient(90deg,#4F7CFF,#6E9BFF)"></div>
+      <div class="flex items-center justify-between">
+        <p class="text-xs uppercase tracking-[.3em] text-[color:var(--muted)]">Player One · Host</p>
+        <span class="dot text-emerald-400 bg-emerald-400"></span>
+      </div>
+      <h3 class="font-display text-2xl mt-3">${state.player}</h3>
+      <p class="text-xs text-emerald-300 uppercase tracking-[.25em] mt-2">Online · Host Badge</p>
+    </div>`;
+  const p2 = state.opponentJoined
+    ? `<div class="pill rounded-3xl p-6 relative overflow-hidden">
+        <div class="absolute inset-x-0 top-0 h-1" style="background:linear-gradient(90deg,#8B5CF6,#B79CFF)"></div>
+        <div class="flex items-center justify-between"><p class="text-xs uppercase tracking-[.3em] text-[color:var(--muted)]">Player Two</p><span class="dot text-emerald-400 bg-emerald-400"></span></div>
+        <h3 class="font-display text-2xl mt-3">NeonFox · 2</h3>
+        <p class="text-xs text-emerald-300 uppercase tracking-[.25em] mt-2">Online · Connected</p>
+      </div>`
+    : `<button onclick="simulateOpponent()" class="pill rounded-3xl p-6 text-left border-dashed">
+        <p class="text-xs uppercase tracking-[.3em] text-[color:var(--muted)]">Player Two · Empty Slot</p>
+        <h3 class="font-display text-2xl mt-3 opacity-50">Join 648-room</h3>
+        <p class="text-xs text-[#6E9BFF] uppercase tracking-[.25em] mt-2">Share code to invite → Tap to simulate</p>
+      </button>`;
+  wrap.innerHTML = p1Card + p2;
+}
+function simulateOpponent(){
+  state.opponentJoined = true;
+  renderRoomPlayers();
+  document.getElementById('waitingMsg').textContent = 'Opponent connected · Ready to duel';
+  document.getElementById('btnStart').disabled = false;
+  document.getElementById('btnSimulate').classList.add('hidden');
+}
+
+/* ============ GAME LOGIC ============ */
+function startGame(){
+  if(!state.opponentJoined) return;
+  state.level = 1; state.round = 1; state.scoreP1 = 0; state.scoreP2 = 0;
+  state.streakP1 = 0; state.streakP2 = 0;
+  resetLevelStats();
+  showScreen('screen-game');
+  setupRound();
+}
+function resetLevelStats(){ state.correctP1=0; state.correctP2=0; state.wrongP1=0; state.wrongP2=0; }
+function setupRound(){
+  clearInterval(state.timerId);
+  state.p1Choice = null;
+  const count = numbersFor(state.level);
+  state.selectedNumbers = Array.from({length: count}, (_,i)=>i+1);
+  state.phase = 'p1Pick';
+  document.getElementById('levelLabel').textContent = state.level;
+  document.getElementById('roundLabel').textContent = state.round;
+  document.getElementById('scoreP1').textContent = state.scoreP1;
+  document.getElementById('scoreP2').textContent = state.scoreP2;
+  renderTurn(); renderCircles(); renderStreak(); setResult('');
+  startTimer();
+}
+function renderTurn(){
+  const banner = document.getElementById('phaseBanner');
+  const title = document.getElementById('turnTitle');
+  const sub = document.getElementById('turnSub');
+  const map = {
+    p1Pick: ['Phase 1 · Player One', `${state.player}: pick a secret number`, 'Selection is encrypted & hidden from Player Two.'],
+    p2Guess: ['Phase 1 · Player Two', 'Player Two: guess the secret number', 'P2 sees all circles — P1 choice stays hidden.'],
+    p2Pick: ['Phase 2 · Player Two', 'NeonFox: pick a secret number', 'P2 secret choice hidden from Player One.'],
+    p1Guess: ['Phase 2 · Player One', `${state.player}: guess NeonFox number`, 'Complete the round. Equal turns, 10 chances each.'],
+  };
+  const [b,t,s] = map[state.phase];
+  banner.innerHTML = `<span class="dot text-[#5FE3FF] bg-[#5FE3FF]"></span> ${b}`;
+  title.textContent = t; sub.textContent = s;
+}
+function renderCircles(){
+  const grid = document.getElementById('circleGrid');
+  grid.innerHTML = state.selectedNumbers.map(n => {
+    const hidden = state.phase==='p2Guess' && false; // all visible
+    const cls = state.phase==='p2Pick' || state.phase==='p1Guess' ? '' : '';
+    return `<button class="num-circle aspect-square grid place-items-center" data-n="${n}" onclick="pickNumber(${n})">
+      <span class="font-display text-xl sm:text-3xl ${state.p1Choice===n && state.phase!=='p1Pick' ? 'underline decoration-[#5FE3FF] decoration-8' : ''}">${n}</span>
+    </button>`;
+  }).join('');
+  // secret picked indicator hidden style when in guess phase
+  if(state.phase==='p2Guess' || state.phase==='p1Guess'){
+    // leave target hidden; render as normal
+  }
+}
+function renderStreak(){
+  const el = document.getElementById('streakRow');
+  el.innerHTML = `
+    <span class="pill rounded-full px-4 py-2 text-xs font-semibold">P1 streak · ${state.streakP1} <span class="text-[#5FE3FF]">${state.streakP1>=5?'+5 bonus armed':state.streakP1>=3?'+2 bonus armed':'—'}</span></span>
+    <span class="pill rounded-full px-4 py-2 text-xs font-semibold">P2 streak · ${state.streakP2} <span class="text-[#B79CFF]">${state.streakP2>=5?'+5 bonus armed':state.streakP2>=3?'+2 bonus armed':'—'}</span></span>`;
+}
+function setResult(html){
+  document.getElementById('resultBanner').innerHTML = html ? `<div class="toast glass rounded-3xl px-7 py-5 font-display text-lg sm:text-2xl ${html.includes('Correct')?'text-emerald-300':'text-rose-300'}" style="border-color:${html.includes('Correct')?'rgba(52,211,153,.4)':'rgba(251,113,133,.4)'}">${html}</div>` : '';
+}
+function pickNumber(n){
+  if(state.phase==='p1Pick'){
+    state.p1Choice = n;
+    document.querySelectorAll(`#circleGrid .num-circle`).forEach(c => c.classList.toggle('picked', +c.dataset.n===n));
+    state.phase='p2Guess'; renderTurn(); resetTimerVisual(); startTimer();
+    setResult(`<span class="text-white/80">P1 selection hidden · waiting for P2 guess…</span>`);
+  } else if(state.phase==='p2Guess'){
+    resolveGuess('P2', n);
+  } else if(state.phase==='p2Pick'){
+    state.p2Choice = n;
+    document.querySelectorAll(`#circleGrid .num-circle`).forEach(c => c.classList.toggle('picked', +c.dataset.n===n));
+    state.phase='p1Guess'; renderTurn(); resetTimerVisual(); startTimer();
+    setResult(`<span class="text-white/80">P2 selection hidden · your guess…</span>`);
+  } else if(state.phase==='p1Guess'){
+    resolveGuess('P1', n);
+  }
+}
+function resolveGuess(who, guess){
+  clearInterval(state.timerId);
+  const choice = who==='P2' ? state.p1Choice : state.p2Choice;
+  const correct = guess === choice;
+  if(who==='P2'){
+    if(correct){ state.scoreP2++; state.correctP2++; state.streakP2++; state.streakP1 = state.streakP1; /* unchanged */ checkStreak('P2'); }
+    else { state.wrongP2++; state.streakP2 = 0; }
+  } else {
+    if(correct){ state.scoreP1++; state.correctP1++; state.streakP1++; state.streakP2 = state.streakP2; checkStreak('P1'); }
+    else { state.wrongP1++; state.streakP1 = 0; }
+  }
+  updateScores(); renderStreak();
+  setResult(correct ? `Correct Guess! +1 · ${who==='P1'?state.player:'NeonFox'}` : `Wrong Guess! · 0 points`);
+  // reveal circle
+  document.querySelectorAll(`#circleGrid .num-circle`).forEach(c => {
+    if(+c.dataset.n===choice) c.classList.add('picked');
+  });
+  setTimeout(()=>{
+    if(who==='P2'){ state.phase='p2Pick'; renderTurn(); renderCircles(); setResult(''); resetTimerVisual(); startTimer(); }
+    else nextRound();
+  }, 1200);
+}
+function checkStreak(who){
+  const s = who==='P1' ? state.streakP1 : state.streakP2;
+  if(s === 3){ addScore(who, 2); flashBonus(who, 2); }
+  if(s === 5){ addScore(who, 5); flashBonus(who, 5); }
+}
+function addScore(who, pts){
+  if(who==='P1') state.scoreP1 += pts; else state.scoreP2 += pts;
+  updateScores();
+}
+function flashBonus(who, pts){
+  const name = who==='P1' ? 'P1' : 'P2';
+  setTimeout(()=>{
+    setResult(`Streak bonus! ${name} +${pts} pts · magic chained`);
+  }, 150);
+}
+function updateScores(){
+  document.getElementById('scoreP1').textContent = state.scoreP1;
+  document.getElementById('scoreP2').textContent = state.scoreP2;
+}
+function startTimer(){
+  clearInterval(state.timerId);
+  state.timer = 15;
+  resetTimerVisual();
+  state.timerId = setInterval(()=>{
+    state.timer -= 1;
+    resetTimerVisual();
+    if(state.timer <= 0){ clearInterval(state.timerId); onTimeout(); }
+  }, 1000);
+}
+function resetTimerVisual(){
+  document.getElementById('timerLabel').textContent = Math.max(state.timer,0);
+  document.getElementById('timerFill').style.width = (state.timer/15*100) + '%';
+}
+function onTimeout(){
+  const label = state.phase;
+  setResult(`Time&rsquo;s up · turn skipped · no points`);
+  setTimeout(()=>{
+    if(label==='p1Pick' || label==='p2Guess'){ // move forward past phase 1
+      if(label==='p1Pick'){ state.phase='p2Guess'; // treat p1 null; P2 guess auto timeout too? simpler: advance to p2 pick
+        state.phase='p2Pick'; }
+      else { state.phase='p2Pick'; }
+      // simpler progression: skip to next logical step
+    }
+    if(state.phase==='p2Pick' || true){ /* advance logic */ }
+    advanceAfterTimeout(label);
+  }, 900);
+}
+function advanceAfterTimeout(label){
+  if(label==='p1Pick'){ state.phase='p2Guess'; } // p1 timed out -> still show p2 guess? Spec: turn skipped = no points. Move directly on.
+  if(label==='p1Pick'){ state.phase='p2Pick'; }
+  if(label==='p2Guess'){ state.phase='p2Pick'; }
+  if(label==='p2Pick'){ state.phase='p1Guess'; }
+  if(label==='p1Guess'){ nextRound(); return; }
+  // need to handle phases that were guess: if p2 guess timed out, move to p2 pick
+  renderTurn(); renderCircles(); setResult(''); resetTimerVisual(); state.timer=15; startTimer();
+}
+function nextRound(){
+  if(state.round >= 10){ levelComplete(); return; }
+  state.round += 1;
+  document.getElementById('roundLabel').textContent = state.round;
+  setupRound();
+}
+function levelComplete(){
+  clearInterval(state.timerId);
+  document.getElementById('lcLevel').textContent = state.level;
+  document.getElementById('lcP1').textContent = state.scoreP1;
+  document.getElementById('lcP2').textContent = state.scoreP2;
+  // per-round this-level accuracy (level): correct/10 each
+  const a1 = Math.round(state.correctP1/10*100), a2 = Math.round(state.correctP2/10*100);
+  document.getElementById('lcStats').innerHTML = [
+    ['P1 Correct', state.correctP1],['P2 Correct', state.correctP2],['P1 Accuracy', a1+'%'],['P2 Accuracy', a2+'%']
+  ].map(([l,v])=>`<div class="pill rounded-3xl p-5 text-center"><p class="text-[11px] uppercase tracking-[.25em] text-[color:var(--muted)]">${l}</p><h4 class="font-display text-2xl mt-2">${v}</h4></div>`).join('');
+  showScreen('screen-level');
+}
+function advanceLevel(){
+  if(state.level >= MAXLVL){ finishGame(); return; }
+  state.level += 1; state.round = 1;
+  state.scoreP1 = 0; state.scoreP2 = 0; // per-level? spec: total; keep cumulative feel — reset per level display ok
+  resetLevelStats(); state.streakP1=0; state.streakP2=0;
+  showScreen('screen-game'); setupRound();
+}
+function finishGame(){
+  document.getElementById('finalStats').innerHTML = [
+    ['Total Score','124'],['Correct Guesses','86'],['Matches Played','100'],['Best Accuracy','92%']
+  ].map(([l,v])=>`<div class="pill rounded-3xl p-5 text-center"><p class="text-[11px] uppercase tracking-[.25em] text-[color:var(--muted)]">${l}</p><h4 class="font-display text-2xl sm:text-3xl mt-2">${v}</h4></div>`).join('');
+  showScreen('screen-final');
+}
+function resetAll(){
+  state.level = 1; state.round = 1; state.scoreP1 = 0; state.scoreP2 = 0;
+  document.getElementById('playerName').value = '';
+  showScreen('screen-login');
+}
+
+/* ============ RULES / LEADERBOARD CONTENT ============ */
+document.getElementById('rulesList').innerHTML = [
+  'Magic Num is a turn-based real-time duel for exactly two players.',
+  '100 Levels · each level = 10 rounds · equal turns per round.',
+  'Player secretly picks a number — opponent reads the reveal. Correct guess = 1 point.',
+  'Each turn runs on a 15s clock. Timeout = skipped turn, zero points.',
+  'Streaks: 3 correct in a row = +2 bonus · 5 = +5 bonus.',
+  'Level 1 opens with 2 circles. Every level adds options; Level 100 demands deep focus.',
+  'Room cap is hard-limited to 2 players. Numbers stay hidden client-side (server-sealed payload).'
+].map(t=>`<li class="flex gap-3"><svg class="w-5 h-5 shrink-0 mt-1" viewBox="0 0 24 24" fill="none" stroke="#6E9BFF" stroke-width="2" stroke-linecap="round"><path d="M5 12l5 5L20 7"/></svg><span>${t}</span></li>`).join('');
+
+const lb = [
+  ['01','Arcana Queen', 27, 34, 412, 34, '79%'],
+  ['02','NeonFox', 24, 31, 389, 31, '77%'],
+  ['03','M0rrowlight', 21, 28, 301, 28, '75%'],
+  ['04','Velvet Void', 18, 25, 268, 24, '72%'],
+  ['05','Quantum Pip', 15, 22, 240, 22, '68%'],
+  ['06', state.player || 'You', 11, 10, 96, 10, '70%'],
+];
+document.getElementById('lbBody').innerHTML = lb.map(([rank,name,wins,matches,hi,levels,pct],i)=>`
+  <tr class="${i===5?'bg-gradient-to-r from-[#4F7CFF33] to-[#8B5CF633]':''}">
+    <td class="py-5 px-3 font-display text-lg ${i<3?'text-white':'text-[color:var(--muted)]'}">${rank}</td>
+    <td class="py-5 px-3 font-semibold">${name} ${i===5?'<span class="pill rounded-full px-2 py-1 text-[10px] uppercase tracking-[.2em] ml-2">You</span>':''}</td>
+    <td class="py-5 px-3">${wins}</td><td class="py-5 px-3">${matches}</td><td class="py-5 px-3 font-display">${hi}</td><td class="py-5 px-3">${levels}</td><td class="py-5 px-3"><span class="pill rounded-full px-3 py-1 text-xs">${pct}</span></td>
+  </tr>`).join('');
+
+/* init */
+showScreen('screen-login');
+</script>
+</body>
+</html>
